@@ -1,0 +1,76 @@
+import { useState, useCallback, useEffect } from "react";
+import useSWR from "swr";
+import useInfiniteScroll from "react-infinite-scroll-hook";
+
+// Fetcher function for useSWR
+const fetchData = (pageNumber: number) => {
+  // Simulate an API call
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const newItems = Array.from(
+        { length: 10 },
+        (_, i) => `Item ${pageNumber * 10 + i + 1}`
+      );
+      resolve(newItems);
+    }, 500);
+  });
+};
+
+const InfiniteScrollWithSWR = () => {
+  const [page, setPage] = useState(1);
+  const [items, setItems] = useState([]);
+
+  // Fetch data using useSWR
+  const { data, error, isLoading } = useSWR(
+    //@ts-ignore
+    page,
+    fetchData,
+    { keepPreviousData: true } // Keep previous data when fetching the next page
+  );
+
+  // Append fetched data to the existing list
+  useEffect(() => {
+    //@ts-expect-error
+    if (data && data.length > 0) {
+      //@ts-expect-error
+      setItems((prev) => [...prev, ...data]);
+    }
+  }, [data]);
+
+  // Determine if there's more data to load
+  //@ts-ignore
+  const hasMore = !data || (data && data.length > 0);
+
+  const loadMore = useCallback(() => {
+    if (hasMore && !isLoading) {
+     
+      //setPage((prevPage) => prevPage + 1);
+      setPage((prevPage) => { 
+        console.log("LOAD-MORE", prevPage + 1);
+        return prevPage + 1
+      });
+    }
+  }, [hasMore, isLoading]);
+
+  const [sentryRef] = useInfiniteScroll({
+    loading: isLoading,
+    hasNextPage: hasMore,
+    onLoadMore: loadMore,
+    rootMargin: "0px 0px 200px 0px",
+  });
+
+  if (error) return <p>Error loading data</p>;
+
+  console.log("RENDER", )
+  return (
+    <div>
+      {items.map((item, index) => (
+        <div key={index}>{item}</div>
+      ))}
+      {isLoading && <div>Loading...</div>}
+      <div ref={sentryRef} />
+    </div>
+  );
+};
+
+export default InfiniteScrollWithSWR;
